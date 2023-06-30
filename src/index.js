@@ -1,6 +1,14 @@
 const puppeteer = require("puppeteer");
-const {ACCOUNT_LINK, EMAIL, PW, LINK_LIST } = require("./env.json");
+const {
+  ACCOUNT_LINK,
+  EMAIL,
+  PW,
+  LINK_LIST,
+  QA_LINK_LISK,
+} = require("./env.json");
 const { exec } = require("child_process");
+
+const devtools = false;
 
 async function accountLogin({ page }) {
   await page.goto(ACCOUNT_LINK);
@@ -31,11 +39,11 @@ async function awaitDockerLoading({ page }) {
 
 function parse({ page, index }) {
   return new Promise(async (res) => {
-    await page.click("#main-menu-container", { delay: 1000 });
+    await page.click("#main_menu_bar > li:nth-child(5) > div", { delay: 1000 });
 
     const sshButton = await page
-      .$$("#main-menu-container li")
-      .then((lis) => lis[0]);
+      .$$("#main_menu_bar > li:nth-child(5) > div > div a")
+      .then((lis) => lis[2]);
     sshButton.click();
 
     setTimeout(async () => {
@@ -88,8 +96,16 @@ async function run({ browser, link, index }) {
   return parse({ page, index });
 }
 
+const linkMap = {
+  task: LINK_LIST,
+  qa: QA_LINK_LISK,
+  all: [...LINK_LIST, ...QA_LINK_LISK],
+};
+
 async function main() {
-  const browser = await puppeteer.launch({});
+  const [inputLink] = process.argv.slice(2);
+  const links = linkMap[inputLink] ?? linkMap.task
+  const browser = await puppeteer.launch({ devtools });
   const page = await browser.newPage();
   await page.setViewport({
     width: 1440,
@@ -98,7 +114,7 @@ async function main() {
 
   await accountLogin({ page });
 
-  const promise_array = LINK_LIST.map((link, index) => {
+  const promise_array = links.map((link, index) => {
     return run({ browser, link, index: index + 1 });
   });
   await Promise.all(promise_array);
